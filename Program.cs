@@ -181,6 +181,7 @@ namespace ConsoleApp1
                         // http://officeopenxml.com/WPSectionPgNumType.php
                         // should i insert SectionBreak after each roll?
 
+                        // add section breaks by hands: https://edu.gcfglobal.org/en/word2016/page-numbers/1/
 
 
                         #region add section break (not used)
@@ -195,8 +196,6 @@ namespace ConsoleApp1
 
                         //tempBody.Append(paragraph232);
                         newBody.ReplaceNodes(tempBody.Elements());
-
-
                     }
                     else
                     {
