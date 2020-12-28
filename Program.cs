@@ -1,4 +1,5 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+﻿using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,20 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
+            string merged = @"D:\asthenis\DocxPaging\merged.docx";
+            using (WordprocessingDocument doc = WordprocessingDocument.Open(merged, true))
+            {
+                MainDocumentPart mainPart = doc.MainDocumentPart;
+
+                var firstSectionProp = mainPart.Document.Body.Elements<SectionProperties>().First();
+                firstSectionProp.Append(new PageNumberType { Start = 1 });
+
+                AppendFooter(mainPart, "Page ", "2");
+                AppendSectionBreaks(mainPart);
+                doc.Close();
+            }
+
+            /*
             string template = @"E:\ConsoleApp1\files\Arztbrief_Ackermann_Detlef_1932-08-13-copy.docx";
             
             //string template = @"D:\asthenis\DocxPaging\TwoPagedTemplate.docx";
@@ -32,8 +47,8 @@ namespace ConsoleApp1
             }
             // run MS WORD
             System.Diagnostics.Process.Start(outputfile);
+            */
 
-            
             /*
             string outputfile2 = @"D:\asthenis\DocxPaging\GenFooter.docx";
 
@@ -52,27 +67,73 @@ namespace ConsoleApp1
             */
         }
 
-        private static void AppendFooter(MainDocumentPart mainPart, string footerText, string OneMergePages)
+        private static void AppendSectionBreaks(MainDocumentPart mainPart)
         {
-            FooterPart footerPart =
-            mainPart.AddNewPart<FooterPart>();
-            
-            footerPart.Footer = new Footer(new Paragraph(new Run(new Text(footerText), new SimpleField() { Instruction = "PAGE" }, new Text(" of " + OneMergePages))));
-            //footerPart.Footer = new Footer(new Paragraph(new Run(new Text(footerText))));
+            if (mainPart == null)
+            {
+                return;
+            }
 
+            //string sectionBreakPara = "<w:p><w:pPr><w:sectPr><w:type w:val=\"nextPage\" /></w:sectPr></w:pPr></w:p>";
+            //Paragraph p = new Paragraph(sectionBreakPara);
+            //string FooterId = mainPart.GetIdOfPart(mainPart.FooterParts.FirstOrDefault());
+            //SectionType SectionBreakType = new SectionType() { Val = SectionMarkValues.NextPage };
+
+            
+            Break[] breaks = mainPart.Document.Descendants<Break>().ToArray();
+            
+            if (breaks.Length > 0)
+            {
+                for (int i = 0; i <= breaks.Length - 1; i++)
+                {
+                    var p = new Paragraph(new SectionProperties(new PageNumberType { Start = 1 }, new SectionType() { Val = SectionMarkValues.NextPage }));
+                    var firstParagraph = breaks[i].Parent.Parent.NextSibling();
+                    firstParagraph.InsertBeforeSelf(p);
+                }
+            }
+            mainPart.Document.Save();
+        }
+
+        private static string AppendFooter(MainDocumentPart mainPart, string footerText, string TemplatePages)
+        {
+            // 1. check mainPart
+            if (mainPart == null) return null;
+
+            // 2. remove all footers if present
+            if (mainPart.FooterParts.Count() > 0)
+            {
+                mainPart.DeleteParts(mainPart.FooterParts);
+            }
+
+            // 3. create and add my own footerPart
+            FooterPart footerPart = mainPart.AddNewPart<FooterPart>();
+
+            // 4. create Footer in my footerPart
+            footerPart.Footer = new Footer(new Paragraph(new Run(
+                new Text() { Text = footerText, Space = SpaceProcessingModeValues.Preserve },
+                new SimpleField() { Instruction = "PAGE" },
+                new Text() { Text = " of ", Space = SpaceProcessingModeValues.Preserve },
+                new Text() { Text = TemplatePages, Space = SpaceProcessingModeValues.Preserve }
+            )));
+
+            // 5.  create footerPart reference
+            string footerPartId = mainPart.GetIdOfPart(footerPart);
+            FooterReference FooterRef = new FooterReference() { Type = HeaderFooterValues.Default, Id = footerPartId };
+
+            // 6. find SectionProperties of document to insert my footerPart reference
             SectionProperties sectionProp = mainPart.Document.Body.Descendants<SectionProperties>().FirstOrDefault();
             if (sectionProp == null)
             {
-                sectionProp = new SectionProperties();
+                sectionProp = new SectionProperties();                
                 mainPart.Document.Body.Append(sectionProp);
             }
+            sectionProp.InsertAt(FooterRef, 0);
 
-            FooterReference FooterRef = new FooterReference() { Type = HeaderFooterValues.Default, Id = mainPart.GetIdOfPart(footerPart) };
+            return footerPartId;
 
+            //sectionProp.Append(new PageNumberType { Start = 1 });
             //SectionType SectionBreakType = new SectionType() { Val = SectionMarkValues.NextPage };
             //sectionProp.Append(SectionBreakType);
-
-            sectionProp.InsertAt(FooterRef, 0);
         }
 
         public static DataSet Loadcsv(string CSV)
@@ -122,7 +183,7 @@ namespace ConsoleApp1
         public static Dictionary<string, string> CreateOneRoll(DataColumnCollection cols, DataRow row)
         {
             Dictionary<string, string> d = new Dictionary<string, string>();
-            for (int i = 0; i < cols.Count-1; i++)
+            for (int i = 0; i < cols.Count - 1; i++)
             {
                 d.Add(cols[i].Caption, row[cols[i].Caption].ToString());
             }
@@ -219,8 +280,8 @@ namespace ConsoleApp1
                 MainDocumentPart mainPart = outDoc.MainDocumentPart;
 
                 AppendFooter(mainPart, "Page ", OneMergePages);
-                mainPart.Document.Save();                
-                
+                mainPart.Document.Save();
+
 
             } // End Using
             return outStream;
@@ -260,9 +321,9 @@ namespace ConsoleApp1
                             new ParagraphStyleId() { Val = "Footer" }),
                         new Run(
                             new Text(FooterText))));
-                            // *** Adaptation: This will output the page number dynamically ***
-                            //new SimpleField() { Instruction = "PAGE" })
-                    //);
+            // *** Adaptation: This will output the page number dynamically ***
+            //new SimpleField() { Instruction = "PAGE" })
+            //);
 
             return element;
         }
