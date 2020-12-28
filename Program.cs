@@ -16,18 +16,43 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
-            string merged = @"D:\asthenis\DocxPaging\merged.docx";
+            string merged = @"E:\asthenis\ConsoleApp1\files\merged.docx";
             using (WordprocessingDocument doc = WordprocessingDocument.Open(merged, true))
             {
                 MainDocumentPart mainPart = doc.MainDocumentPart;
 
-                var firstSectionProp = mainPart.Document.Body.Elements<SectionProperties>().First();
-                firstSectionProp.Append(new PageNumberType { Start = 1 });
+                //var firstSectionProp = mainPart.Document.Body.Elements<SectionProperties>().First();
+                //firstSectionProp.Append(new PageNumberType { Start = 1 });
 
-                AppendFooter(mainPart, "Page ", "2");
-                AppendSectionBreaks(mainPart);
+                if (mainPart.FooterParts.Count() > 0)
+                    mainPart.DeleteParts(mainPart.FooterParts);
+
+                // 3. create and add my own footerPart
+                FooterPart footerPart = mainPart.AddNewPart<FooterPart>();
+
+                // 5.  create footerPart reference
+                string footerPartId = mainPart.GetIdOfPart(footerPart);
+                FooterReference FooterRef = new FooterReference() { Type = HeaderFooterValues.Default, Id = footerPartId };
+
+                // 6. find SectionProperties of document to insert my footerPart reference
+                SectionProperties sectionProp = mainPart.Document.Body.Descendants<SectionProperties>().FirstOrDefault();
+                if (sectionProp == null)
+                {
+                    sectionProp = new SectionProperties();
+                    mainPart.Document.Body.Append(sectionProp);
+                }
+                sectionProp.Append(FooterRef);
+                sectionProp.Append(new PageNumberType() { Start = 1 });
+                
+
+                GeneratePartContent(footerPart);
+
+                //AppendFooter(mainPart, "Page ", "2");
+                //AppendSectionBreaks(mainPart);
                 doc.Close();
             }
+
+           
 
             /*
             string template = @"E:\ConsoleApp1\files\Arztbrief_Ackermann_Detlef_1932-08-13-copy.docx";
@@ -66,6 +91,113 @@ namespace ConsoleApp1
             System.Diagnostics.Process.Start(outputfile2);
             */
         }
+
+        // Creates an Paragraph instance and adds its children.
+        public Paragraph GenerateSectionBreak(string FooterId)
+        {
+            Paragraph paragraph1 = new Paragraph() { };
+            ParagraphProperties paragraphProperties1 = new ParagraphProperties();
+
+            SectionProperties sectionProperties1 = new SectionProperties();
+            FooterReference footerReference1 = new FooterReference() { Type = HeaderFooterValues.Default, Id = FooterId };
+            PageNumberType pageNumberType1 = new PageNumberType() { Start = 1 };
+
+            sectionProperties1.Append(footerReference1);
+            sectionProperties1.Append(pageNumberType1);
+            paragraphProperties1.Append(sectionProperties1);
+            paragraph1.Append(paragraphProperties1);
+            return paragraph1;
+        }
+
+
+        // Creates an SectionProperties instance and adds its children.
+        public SectionProperties GenerateSectionProperties(string FooterId)
+        {
+            SectionProperties sectionProperties1 = new SectionProperties();
+            FooterReference footerReference1 = new FooterReference() { Type = HeaderFooterValues.Default, Id = FooterId };
+            PageNumberType pageNumberType1 = new PageNumberType() { Start = 1 };
+            sectionProperties1.Append(footerReference1);
+            sectionProperties1.Append(pageNumberType1);
+            return sectionProperties1;
+        }
+
+
+        // Generates content of part.
+        private static void GeneratePartContent(FooterPart part)
+        {
+            Footer footer1 = new Footer() { MCAttributes = new MarkupCompatibilityAttributes() { Ignorable = "w14 w15 w16se w16cid w16 w16cex wp14" } };
+
+            SdtBlock sdtBlock1 = new SdtBlock();
+
+            SdtProperties sdtProperties1 = new SdtProperties();
+            SdtId sdtId1 = new SdtId() { Val = -1148118727 };
+
+            SdtContentDocPartObject sdtContentDocPartObject1 = new SdtContentDocPartObject();
+            DocPartGallery docPartGallery1 = new DocPartGallery() { Val = "Page Numbers (Bottom of Page)" };
+            DocPartUnique docPartUnique1 = new DocPartUnique();
+
+            sdtContentDocPartObject1.Append(docPartGallery1);
+            sdtContentDocPartObject1.Append(docPartUnique1);
+
+            sdtProperties1.Append(sdtId1);
+            sdtProperties1.Append(sdtContentDocPartObject1);
+            SdtEndCharProperties sdtEndCharProperties1 = new SdtEndCharProperties();
+
+            SdtContentBlock sdtContentBlock1 = new SdtContentBlock();
+
+            Paragraph paragraph1 = new Paragraph() { RsidParagraphAddition = "0015519F", RsidRunAdditionDefault = "0015519F", ParagraphId = "27E9289D", TextId = "2D8B7311" };
+
+            ParagraphProperties paragraphProperties1 = new ParagraphProperties();
+            ParagraphStyleId paragraphStyleId1 = new ParagraphStyleId() { Val = "a5" };
+
+            paragraphProperties1.Append(paragraphStyleId1);
+
+            Run run1 = new Run();
+            FieldChar fieldChar1 = new FieldChar() { FieldCharType = FieldCharValues.Begin };
+
+            run1.Append(fieldChar1);
+
+            Run run2 = new Run();
+            FieldCode fieldCode1 = new FieldCode();
+            fieldCode1.Text = "PAGE   \\* MERGEFORMAT";
+
+            run2.Append(fieldCode1);
+
+            Run run3 = new Run();
+            FieldChar fieldChar2 = new FieldChar() { FieldCharType = FieldCharValues.Separate };
+
+            run3.Append(fieldChar2);
+
+            Run run4 = new Run();
+            Text text1 = new Text();
+            text1.Text = "2";
+
+            run4.Append(text1);
+
+            Run run5 = new Run();
+            FieldChar fieldChar3 = new FieldChar() { FieldCharType = FieldCharValues.End };
+
+            run5.Append(fieldChar3);
+
+            paragraph1.Append(paragraphProperties1);
+            paragraph1.Append(run1);
+            paragraph1.Append(run2);
+            paragraph1.Append(run3);
+            paragraph1.Append(run4);
+            paragraph1.Append(run5);
+
+            sdtContentBlock1.Append(paragraph1);
+
+            sdtBlock1.Append(sdtProperties1);
+            sdtBlock1.Append(sdtEndCharProperties1);
+            sdtBlock1.Append(sdtContentBlock1);
+           
+
+            footer1.Append(sdtBlock1);
+
+            part.Footer = footer1;
+        }
+
 
         private static void AppendSectionBreaks(MainDocumentPart mainPart)
         {
