@@ -16,11 +16,15 @@ namespace ConsoleApp1
     {
         static void Main(string[] args)
         {
-            string merged = @"E:\asthenis\ConsoleApp1\files\merged.docx";
+            string merged = @"D:\asthenis\DocxPaging\merged.docx";
             using (WordprocessingDocument doc = WordprocessingDocument.Open(merged, true))
             {
                 MainDocumentPart mainPart = doc.MainDocumentPart;
 
+                string footerPartId =
+                AppendFooter(mainPart, "Page ", "2");
+
+                /*
                 //var firstSectionProp = mainPart.Document.Body.Elements<SectionProperties>().First();
                 //firstSectionProp.Append(new PageNumberType { Start = 1 });
 
@@ -43,16 +47,44 @@ namespace ConsoleApp1
                 }
                 sectionProp.Append(FooterRef);
                 sectionProp.Append(new PageNumberType() { Start = 1 });
-                
 
-                GeneratePartContent(footerPart);
+                GenerateFooterContent(footerPart, "2", "Page ");
 
-                //AppendFooter(mainPart, "Page ", "2");
-                //AppendSectionBreaks(mainPart);
+                // insert section breaks
+                */
+
+                Break[] breaks = mainPart.Document.Descendants<Break>().ToArray();
+
+                if (breaks.Length > 0)
+                {
+                    for (int i = 0; i <= breaks.Length - 1; i++)
+                    {
+                        //var p = new Paragraph(new SectionProperties(new PageNumberType { Start = 1 }, new SectionType() { Val = SectionMarkValues.NextPage }));
+                        //var firstParagraph = breaks[i].Parent.Parent.NextSibling();
+                        //firstParagraph.InsertBeforeSelf(p);
+
+                        Paragraph breakParagraph = breaks[i].Parent.Parent as Paragraph;
+
+                        var prop = breakParagraph.Descendants<ParagraphProperties>().FirstOrDefault();
+                        if (prop != null)
+                        {
+                            prop.Remove();
+                        }
+
+                        FooterReference footerReference1 = new FooterReference() { Type = HeaderFooterValues.Default, Id = footerPartId };
+                        PageNumberType pageNumberType1 = new PageNumberType() { Start = 1 };
+
+                        breakParagraph.InsertAt(new ParagraphProperties(new SectionProperties(footerReference1, pageNumberType1)), 0);
+
+                    }
+                }
+                mainPart.Document.Save();
+
+
                 doc.Close();
             }
 
-           
+
 
             /*
             string template = @"E:\ConsoleApp1\files\Arztbrief_Ackermann_Detlef_1932-08-13-copy.docx";
@@ -90,6 +122,18 @@ namespace ConsoleApp1
             }
             System.Diagnostics.Process.Start(outputfile2);
             */
+        }
+
+        private static void GenerateFooterContent(FooterPart footerPart, string TemplatePagesCount, string textPref = "Page ")
+        {
+            Run begin = new Run(new FieldChar() { FieldCharType = FieldCharValues.Begin });
+            Run fieldCodePage = new Run(new FieldCode() { Text = "PAGE   \\* MERGEFORMAT" });
+            Run Separate = new Run(new FieldChar() { FieldCharType = FieldCharValues.Separate });
+            Run end = new Run(new FieldChar() { FieldCharType = FieldCharValues.End });
+
+            var p = new Paragraph(begin, fieldCodePage, Separate, end);
+
+            footerPart.Footer = new Footer(new SdtBlock(new SdtContentBlock(p)));
         }
 
         // Creates an Paragraph instance and adds its children.
@@ -191,7 +235,7 @@ namespace ConsoleApp1
             sdtBlock1.Append(sdtProperties1);
             sdtBlock1.Append(sdtEndCharProperties1);
             sdtBlock1.Append(sdtContentBlock1);
-           
+
 
             footer1.Append(sdtBlock1);
 
@@ -211,9 +255,9 @@ namespace ConsoleApp1
             //string FooterId = mainPart.GetIdOfPart(mainPart.FooterParts.FirstOrDefault());
             //SectionType SectionBreakType = new SectionType() { Val = SectionMarkValues.NextPage };
 
-            
+
             Break[] breaks = mainPart.Document.Descendants<Break>().ToArray();
-            
+
             if (breaks.Length > 0)
             {
                 for (int i = 0; i <= breaks.Length - 1; i++)
@@ -256,7 +300,7 @@ namespace ConsoleApp1
             SectionProperties sectionProp = mainPart.Document.Body.Descendants<SectionProperties>().FirstOrDefault();
             if (sectionProp == null)
             {
-                sectionProp = new SectionProperties();                
+                sectionProp = new SectionProperties();
                 mainPart.Document.Body.Append(sectionProp);
             }
             sectionProp.InsertAt(FooterRef, 0);
